@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <script src="https://npmcdn.com/babel-core@5.8.38/browser.min.js"></script>
+    <script src="/socket.io/socket.io.js"></script>
+
+    <script type="text/babel" >
+        "use strict";
+
+        var canvas = document.getElementById('canvas');
+        var ctx = canvas.getContext('2d');
+        var drawQ = {};
+        const user = `user${(Math.floor((Math.random()*1000)) + 1)}`;
+
+        let sendBufferCanvas;
+        let sendBufferCtx;
+
+
+        const init = () => {
+
+            var socket = io.connect();
+
+            const setup = () => {
+                sendBufferCanvas=document.createElement("canvas");
+                sendBufferCanvas.height=500;
+                sendBufferCanvas.width=500;
+                sendBufferCtx=sendBufferCanvas.getContext("2d");
+
+                ctx.fillStyle = "red";
+                ctx.font = "40px Verdana"
+                ctx.fillText("click me",100,100);
+
+                const data={
+                    x:0,
+                    y:0,
+                    height:500,
+                    width:500,
+                    imgData: sendBufferCanvas.toDataURL()
+                }
+                socket.emit("draw",data);
+            };
+
+            const handleMessage = (data) => {
+                
+                let image = new Image();
+
+                image.onload = () => {
+                    ctx.save();
+                    ctx.globalCompositeOperation="source-over";
+                    ctx.drawImage(image,data.x,data.y,data.width,data.height);
+                    ctx.restore();
+                };
+
+                image.src = data.imgData;
+            };
+          
+            socket.on('draw', (data)=>{
+                handleMessage(data);
+            });
+
+
+            canvas.addEventListener("click", function(){
+                console.log("click");
+
+                var xLoc = event.clientX;
+                var yLoc = event.clientY;
+
+                ctx.fillStyle = "red";
+                sendBufferCtx.fillStyle = "black";
+
+                sendBufferCtx.clearRect(0,0, canvas.width, canvas.height);
+
+                ctx.fillRect(xLoc,yLoc, 50, 50);
+                sendBufferCtx.fillRect(xLoc,yLoc, 50, 50);
+
+
+                const data={
+                    x:xLoc,
+                    y:yLoc,
+                    height:500,
+                    width: 500,
+                    imgData: sendBufferCanvas.toDataURL()
+                }
+                socket.emit("draw",data);
+               
+
+
+            }, false);
+
+
+           setup();
+        };
+
+
+        window.onload = init;
+    
+    </script>
+</head>
+<body>
+       <canvas id="canvas" width="500" height="500"></canvas>
+</body>
+</html>
